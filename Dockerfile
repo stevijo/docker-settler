@@ -1,4 +1,4 @@
-FROM guilhem/vagrant-ubuntu:14.04
+FROM ubuntu:14.04
 
 # Install packages
 ADD create_memcached_admin_user.sh /create_memcached_admin_user.sh
@@ -7,7 +7,8 @@ ADD run.sh /run.sh
 
 RUN chmod +x /*.sh
 
+ENV DEBIAN_FRONTEND noninteractive
 RUN ./provision.sh
 
-EXPOSE 80 22 5432 35729 27017
+EXPOSE 80
 CMD ["/run.sh"]

@@ -66,6 +66,7 @@ ln -s /etc/php5/mods-available/mailparse.ini /etc/php5/cli/conf.d/20-mailparse.i
 curl -sS https://getcomposer.org/installer | php
 mv composer.phar /usr/local/bin/composer
 
+
 # Add Composer Global Bin To Path
 
 printf "\nPATH=\"/home/vagrant/.composer/vendor/bin:\$PATH\"\n" | tee -a /home/vagrant/.profile
@@ -78,8 +79,8 @@ EOF
 
 # Set Some PHP CLI Settings
 
-sudo sed -i "s/error_reporting = .*/error_reporting = E_ALL/" /etc/php5/cli/php.ini
-sudo sed -i "s/display_errors = .*/display_errors = On/" /etc/php5/cli/php.ini
+sudo sed -i "s/error_reporting = .*/error_reporting = E_ALL & ~E_DEPRECATED & ~E_STRICT/" /etc/php5/cli/php.ini
+sudo sed -i "s/display_errors = .*/display_errors = Off/" /etc/php5/cli/php.ini
 sudo sed -i "s/memory_limit = .*/memory_limit = 512M/" /etc/php5/cli/php.ini
 sudo sed -i "s/;date.timezone.*/date.timezone = UTC/" /etc/php5/cli/php.ini
 
@@ -98,12 +99,6 @@ echo deb http://dl.hhvm.com/ubuntu trusty main | tee /etc/apt/sources.list.d/hhv
 apt-get update
 apt-get install -y hhvm
 
-# Configure HHVM To Run As Homestead
-
-service hhvm stop
-sed -i 's/#RUN_AS_USER="www-data"/RUN_AS_USER="vagrant"/' /etc/default/hhvm
-service hhvm start
-
 # Start HHVM On System Start
 
 update-rc.d hhvm defaults
@@ -112,18 +107,13 @@ update-rc.d hhvm defaults
 
 ln -s /etc/php5/mods-available/mailparse.ini /etc/php5/fpm/conf.d/20-mailparse.ini
 
-sed -i "s/error_reporting = .*/error_reporting = E_ALL/" /etc/php5/fpm/php.ini
-sed -i "s/display_errors = .*/display_errors = On/" /etc/php5/fpm/php.ini
+sed -i "s/error_reporting = .*/error_reporting = E_ALL & ~E_DEPRECATED & ~E_STRICT/" /etc/php5/fpm/php.ini
+sed -i "s/display_errors = .*/display_errors = Off/" /etc/php5/fpm/php.ini
 sed -i "s/;cgi.fix_pathinfo=1/cgi.fix_pathinfo=0/" /etc/php5/fpm/php.ini
 sed -i "s/memory_limit = .*/memory_limit = 512M/" /etc/php5/fpm/php.ini
 sed -i "s/upload_max_filesize = .*/upload_max_filesize = 100M/" /etc/php5/fpm/php.ini
 sed -i "s/post_max_size = .*/post_max_size = 100M/" /etc/php5/fpm/php.ini
 sed -i "s/;date.timezone.*/date.timezone = UTC/" /etc/php5/fpm/php.ini
-
-echo "xdebug.remote_enable = 1" >> /etc/php5/fpm/conf.d/20-xdebug.ini
-echo "xdebug.remote_connect_back = 1" >> /etc/php5/fpm/conf.d/20-xdebug.ini
-echo "xdebug.remote_port = 9000" >> /etc/php5/fpm/conf.d/20-xdebug.ini
-echo "xdebug.max_nesting_level = 512" >> /etc/php5/fpm/conf.d/20-xdebug.ini
 
 # Copy fastcgi_params to Nginx because they broke it on the PPA
 
@@ -151,24 +141,14 @@ EOF
 
 # Set The Nginx & PHP-FPM User
 
-sed -i "s/user www-data;/user vagrant;/" /etc/nginx/nginx.conf
 sed -i "s/# server_names_hash_bucket_size.*/server_names_hash_bucket_size 64;/" /etc/nginx/nginx.conf
 
-sed -i "s/user = www-data/user = vagrant/" /etc/php5/fpm/pool.d/www.conf
-sed -i "s/group = www-data/group = vagrant/" /etc/php5/fpm/pool.d/www.conf
-
-sed -i "s/listen\.owner.*/listen.owner = vagrant/" /etc/php5/fpm/pool.d/www.conf
-sed -i "s/listen\.group.*/listen.group = vagrant/" /etc/php5/fpm/pool.d/www.conf
+sed -i "s/listen\.owner.*/listen.owner = www-data/" /etc/php5/fpm/pool.d/www.conf
+sed -i "s/listen\.group.*/listen.group = www-data/" /etc/php5/fpm/pool.d/www.conf
 sed -i "s/;listen\.mode.*/listen.mode = 0666/" /etc/php5/fpm/pool.d/www.conf
 
 service nginx restart
 service php5-fpm restart
-
-# Add Vagrant User To WWW-Data
-
-usermod -a -G www-data vagrant
-id vagrant
-groups vagrant
 
 # Install Node
 
@@ -189,12 +169,12 @@ apt-get install -y mysql-server-5.6
 
 # Configure MySQL Remote Access
 
-sed -i '/^bind-address/s/bind-address.*=.*/bind-address = 0.0.0.0/' /etc/mysql/my.cnf
-mysql --user="root" --password="secret" -e "GRANT ALL ON *.* TO root@'0.0.0.0' IDENTIFIED BY 'secret' WITH GRANT OPTION;"
+sed -i '/^bind-address/s/bind-address.*=.*/bind-address = 127.0.0.1/' /etc/mysql/my.cnf
+mysql --user="root" --password="secret" -e "GRANT ALL ON *.* TO root@'127.0.0.1' IDENTIFIED BY 'secret' WITH GRANT OPTION;"
 service mysql restart
 
-mysql --user="root" --password="secret" -e "CREATE USER 'homestead'@'0.0.0.0' IDENTIFIED BY 'secret';"
-mysql --user="root" --password="secret" -e "GRANT ALL ON *.* TO 'homestead'@'0.0.0.0' IDENTIFIED BY 'secret' WITH GRANT OPTION;"
+mysql --user="root" --password="secret" -e "CREATE USER 'homestead'@'127.0.0.1' IDENTIFIED BY 'secret';"
+mysql --user="root" --password="secret" -e "GRANT ALL ON *.* TO 'homestead'@'127.0.0.1' IDENTIFIED BY 'secret' WITH GRANT OPTION;"
 mysql --user="root" --password="secret" -e "GRANT ALL ON *.* TO 'homestead'@'%' IDENTIFIED BY 'secret' WITH GRANT OPTION;"
 mysql --user="root" --password="secret" -e "FLUSH PRIVILEGES;"
 mysql --user="root" --password="secret" -e "CREATE DATABASE homestead;"
@@ -210,7 +190,6 @@ apt-get install -y postgresql-9.4 postgresql-contrib-9.4
 
 # Configure Postgres Remote Access
 
-sed -i "s/#listen_addresses = 'localhost'/listen_addresses = '*'/g" /etc/postgresql/9.4/main/postgresql.conf
 echo "host    all             all             10.0.2.2/32               md5" | tee -a /etc/postgresql/9.4/main/pg_hba.conf
 sudo -u postgres psql -c "CREATE ROLE homestead LOGIN UNENCRYPTED PASSWORD 'secret' SUPERUSER INHERIT NOCREATEDB NOCREATEROLE NOREPLICATION;"
 sudo -u postgres /usr/bin/createdb --echo --owner=homestead homestead
@@ -241,5 +220,4 @@ apt-get update
 # Install MongoDB
 # -qq implies -y --force-yes
 apt-get install -y mongodb-org
-sed -i 's/bind_ip.*/bind_ip=0.0.0.0/g' /etc/mongod.conf
 mkdir -p /data/db
