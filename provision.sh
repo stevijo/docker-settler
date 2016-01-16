@@ -54,7 +54,6 @@ apt-get install -y --force-yes php7.0-cli php7.0-dev \
 
 pecl install mongodb
 echo "extension=mongodb.so" >> `php --ini | grep "Loaded Configuration" | sed -e "s|.*:\s*||"`
-echo "extension=mongodb.so" >> /etc/php/7.0/fpm/php.ini
 # Install Composer
 
 curl -sS https://getcomposer.org/installer | php
@@ -120,6 +119,8 @@ sed -i "s/memory_limit = .*/memory_limit = 512M/" /etc/php5/fpm/php.ini
 sed -i "s/upload_max_filesize = .*/upload_max_filesize = 100M/" /etc/php5/fpm/php.ini
 sed -i "s/post_max_size = .*/post_max_size = 100M/" /etc/php5/fpm/php.ini
 sed -i "s/;date.timezone.*/date.timezone = UTC/" /etc/php5/fpm/php.ini
+
+echo "extension=mongodb.so" >> /etc/php/7.0/fpm/php.ini
 
 # Copy fastcgi_params to Nginx because they broke it on the PPA
 
