@@ -3,8 +3,8 @@
 echo "starting nginx"
 service nginx start
 
-echo "starting php5-fpm"
-service php5-fpm start
+echo "starting php7.0-fpm"
+service php7.0-fpm start
 
 echo "starting supervisor"
 service supervisor start
@@ -29,5 +29,8 @@ echo "starting beanstalk"
 echo "starting redis server"
 redis-server /etc/redis/redis.conf
 
+echo "starting postgresql"
+service postgresql start
+
 echo "starting ssh (ssh is the only service keeping this container alive)"
-exec /usr/sbin/sshd -D
+/usr/sbin/sshd -D -e
